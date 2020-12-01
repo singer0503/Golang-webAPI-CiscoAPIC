@@ -12,11 +12,11 @@ import (
 	"time"
 )
 
-// APIC username / password
+//TODO: APIC username / password
 var username string = "xxxxxxxxx"
 var pwd string = "pwdpwdpwdpwd"
 
-// your apic Server web api url (change 127.0.0.1 )
+//TODO: your apic Server web api url (change 127.0.0.1 )
 var loginEndpoint string = "https://127.0.0.1/api/class/aaaLogin.json"
 var eqptStorageEndpoint string = "https://127.0.0.1/api/class/eqptStorage.json"
 
@@ -151,16 +151,16 @@ func main() {
 	body, _ := ioutil.ReadAll(resp.Body)
 
 	// ======================================================
-	// 把 token value 從 body 取出 ( XXXXXXX...)
+	// Take the token value out of the body (XXXXXXX...)
 	loginBodyString := string(body)
 	var loginResult LoginResult
 	json.Unmarshal([]byte(loginBodyString), &loginResult)
 	token := loginResult.Imdata[0].AaaLogin.Attributes.Token
 
 	// ======================================================
-	// 下一個 Get 的 Request Header 要帶上 token
-	// 範例資料 ( Cookie : "APIC-cookie=" + XXXXXXX...)
-	// 若有需要，後面可加上 ; Path=/; Domain=172.16.253.101; Secure; HttpOnly;
+	// The next Get Request Header must bring token
+	// Sample ( Cookie : "APIC-cookie=" + XXXXXXX...)
+	// If necessary, add ( ; Path=/; Domain=172.16.253.101; Secure; HttpOnly; )
 	url = eqptStorageEndpoint
 
 	req, err = http.NewRequest("GET", url, nil)
@@ -177,18 +177,22 @@ func main() {
 	body, _ = ioutil.ReadAll(resp.Body)
 
 	// ==============================
-	// 把 cpuPct (CPU使用率) 從 body 取出
+	// with body get Disk Capacity
 	eqptBodyString := string(body)
 	var eqptResult EqptStorage
 	json.Unmarshal([]byte(eqptBodyString), &eqptResult)
-	var count, _ = strconv.Atoi(eqptResult.TotalCount) // 將取得的總數轉型為 int
-	mapData := make(map[string]string)                 // 使用 map 做資料整理
-	// 動態將抓到的 CPU 值，放入陣列
+	var count, _ = strconv.Atoi(eqptResult.TotalCount) // Convert the total obtained to int
+	mapData := make(map[string]string)                 // Use map to organize data
+	// Dynamically put the captured disk path and Disk Capacity into the map
 	for i := 0; i < count-1; i++ {
 		mapData[eqptResult.Imdata[i].EqptStorage.Attributes.Dn] = eqptResult.Imdata[i].EqptStorage.Attributes.CapUtilized
+		//fmt.Println(mapData[eqptResult.Imdata[i].EqptStorage.Attributes.Dn]) // debug
+		//fmt.Println(eqptResult.Imdata[i].EqptStorage.Attributes.CapUtilized) // debug
 	}
 
-	// 開始抓取需要的資料
+	// ==============================
+	// Start crawling the required
+	// TODO: Here you need to modify it to the disk path you want to grab
 	// Node1: data / data2
 	node1Data, ok := mapData["topology/pod-1/node-1/sys/ch/p-[/data]-f-[/dev/mapper/vg_ifc0_ssd-data]"]
 	if !ok {
@@ -218,7 +222,7 @@ func main() {
 	}
 
 	// ==============================
-	// 輸出 prtg 可以接受的格式
+	// Output format data to a PRTG
 	var prtgOutputString = `{"prtg": {"result": [{"channel": "Node1/Data DiskCapacity","value": %s},{"channel": "Node1/Data2 DiskCapacity","value": %s},{"channel": "Node2/Data DiskCapacity","value": %s},{"channel": "Node2/Data2 DiskCapacity","value": %s},{"channel": "Node3/Data DiskCapacity","value": %s},{"channel": "Node3/Data2 DiskCapacity","value": %s}]}}`
 	fmt.Printf(jsonPrettyPrint(prtgOutputString)+"\n", node1Data, node1Data2, node2Data, node2Data2, node3Data, node3Data2)
 }

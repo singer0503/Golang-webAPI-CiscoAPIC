@@ -11,11 +11,11 @@ import (
 	"time"
 )
 
-// APIC username / password
+//TODO: APIC username / password
 var username string = "xxxxxxxxx"
 var pwd string = "pwdpwdpwdpwd"
 
-// your apic Server web api url
+//TODO: your apic Server web api url
 var loginEndpoint string = "https://172.16.253.101/api/class/aaaLogin.json"
 var cpuEndpoint string = "https://172.16.253.101/api/node/class/procEntity.json"
 
@@ -126,7 +126,7 @@ func main() {
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	// ======================================================
-	// 使用 post 方法進行登入
+	// Use the post method to log in
 	url := loginEndpoint
 	var jsonStr = []byte("{\"aaaUser\":{\"attributes\":{\"name\":\"" + username + "\",\"pwd\":\"" + pwd + "\"}}}")
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
@@ -138,19 +138,19 @@ func main() {
 		panic(err)
 	}
 	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body) // 取得回應 body 資料
+	body, _ := ioutil.ReadAll(resp.Body) // Get response body data
 
 	// ======================================================
-	// 把 token value 從 body 取出 ( XXXXXXX...)
+	// Take the token value out of the body (XXXXXXX...)
 	loginBodyString := string(body)
 	var loginResult LoginResult
 	json.Unmarshal([]byte(loginBodyString), &loginResult)
 	token := loginResult.Imdata[0].AaaLogin.Attributes.Token
 
 	// ======================================================
-	// 下一個 Get 的 Request Header 要帶上 token
-	// 範例資料 ( Cookie : "APIC-cookie=" + XXXXXXX...)
-	// 若有需要，後面可加上 ; Path=/; Domain=172.16.253.101; Secure; HttpOnly;
+	// The next Get Request Header must bring token
+	// Sample ( Cookie : "APIC-cookie=" + XXXXXXX...)
+	// If necessary, add ( ; Path=/; Domain=172.16.253.101; Secure; HttpOnly; )
 	url = cpuEndpoint
 
 	req, err = http.NewRequest("GET", url, nil)
@@ -166,21 +166,21 @@ func main() {
 	body, _ = ioutil.ReadAll(resp.Body)
 
 	// ==============================
-	// 把 cpuPct (CPU使用率) 從 body 取出
+	// Take cpuPct (CPU usage rate) out of body
 	cpuBodyString := string(body)
 	var cpuResult ProcEntity
 	json.Unmarshal([]byte(cpuBodyString), &cpuResult)
-	var count, _ = strconv.Atoi(cpuResult.TotalCount) // 將取得的總數轉型為 int
-	var array = make([]string, count)                 // 產生動態數組存放資料
+	var count, _ = strconv.Atoi(cpuResult.TotalCount) // Convert the total obtained to int
+	var array = make([]string, count)                 // Generate dynamic array to store data
 
-	// 將抓到的 CPU 值，放入動態陣列
+	// Put the captured CPU value into the dynamic array
 	for i, _ := range array {
 		array[i] = cpuResult.Imdata[i].ProcEntity.Attributes.CPUPct
 		//fmt.Println("array[" + strconv.Itoa(i) + "] = " + array[i]) // debug
 	}
 
 	// ==============================
-	// 輸出成 prtg 可以接受的格式
+	// Output format data to a PRTG
 	var prtgOutputString = `{"prtg": {"result": [{"channel": "Node-1","value": %s},{"channel": "Node-2","value": %s},{"channel": "Node-3","value": %s}]}}`
 	fmt.Printf(jsonPrettyPrint(prtgOutputString)+"\n", array[0], array[1], array[2])
 }
